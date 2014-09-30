@@ -61,6 +61,17 @@ const uint8_t dataRate = 4; // 0=800Hz, 1=400, 2=200, 3=100, 4=50, 5=12.5, 6=6.2
 
 //////////////////////////////////
 
+
+bool touchpad_read_register2(uint8_t device_address, uint8_t register_address, uint8_t *value)
+{
+  bool transfer_succeeded = true;
+  transfer_succeeded &= twi_master_transfer(device_address, &register_address, 1, TWI_DONT_ISSUE_STOP);
+  if (transfer_succeeded) 
+  {
+    transfer_succeeded &= twi_master_transfer(device_address | TWI_READ_BIT, value, 1, TWI_ISSUE_STOP);
+  }
+  return transfer_succeeded;
+}  
 /**
  * @brief Function for application main entry.
  */
@@ -126,70 +137,5 @@ int main(void)
 			nrf_gpio_pin_clear(LED_1);
 			simple_uart_putstring((const uint8_t *) "\r\nMMA8452Q is offline...");
 		}
-		
-//		MMA8452Standby();
-		
-//		while(1){
-//				int accelCount[3];  // Stores the 12-bit signed value
-//				readAccelData(accelCount);  // Read the x/y/z adc values
-//			
-//				simple_uart_putstring((const uint8_t *) "\r\naccelCount[0] :   ");
-//				simple_uart_putstring((const uint8_t *) accelCount[0]);
-//			
-//				nrf_delay_ms(500);
-//		}
-		
-//    ds1624_init_succeeded       = ds1624_init(DS1624_ADDRESS);
-
-//    // If both failed to initialized, halt here.
-//    if (!touchpad_init_succeeded && !ds1624_init_succeeded)
-//    {
-//        nrf_gpio_port_write(NRF_GPIO_PORT_SELECT_PORT1, 0x5F);
-//        while (true) 
-//        {
-//            // Do nothing.
-//        }
-//    }
-
-//    while(true)
-//    {
-//        if (ds1624_init_succeeded)
-//        {
-//            if (!m_conversion_in_progress) 
-//            {
-//                m_conversion_in_progress = ds1624_start_temp_conversion();
-//            }
-//            else
-//            {
-//            // Succeeded.
-//                if (ds1624_is_temp_conversion_done())
-//                {
-//                    m_conversion_in_progress = false;
-//                    int8_t temperature;
-//                    int8_t temperature_fraction;
-//      
-//                    if (ds1624_temp_read(&temperature, &temperature_fraction))
-//                    {
-//                        nrf_gpio_port_clear(NRF_GPIO_PORT_SELECT_PORT1, 0x7F);
-//                        nrf_gpio_port_set(NRF_GPIO_PORT_SELECT_PORT1, (uint8_t)temperature);
-//                    }
-//                }
-//            }
-//        }
-
-//        if (touchpad_init_succeeded)
-//        {       
-//            uint8_t touchpad_button_status; // read button status.
-//            if (touchpad_read_register(TOUCHPAD_BUTTON_STATUS, &touchpad_button_status))
-//            {
-//                // There's a active low button on the side of the touchpad, check the state and light up a LED if it's pressed.
-//                nrf_gpio_port_clear(NRF_GPIO_PORT_SELECT_PORT1, 0x80);
-//                if (!(touchpad_button_status & 0x01))
-//                {
-//                    nrf_gpio_port_set(NRF_GPIO_PORT_SELECT_PORT1, 0x80);
-//                }
-//            }
-//        }
-//    }
 }
 /** @} */
