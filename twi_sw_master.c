@@ -121,19 +121,19 @@ bool twi_master_transfer(uint8_t address, uint8_t *data, uint8_t data_length, bo
 	
     transfer_succeeded &= twi_master_issue_startcondition();
 	
-		simple_uart_putstring((const uint8_t *) "twi_master_issue_startcondition : ");
-		if(transfer_succeeded)
-				simple_uart_putstring((const uint8_t *) "succeeded ");
-		else
-				simple_uart_putstring((const uint8_t *) "failed ");
+//		simple_uart_putstring((const uint8_t *) "\r\ntwi_master_issue_startcondition : ");
+//		if(transfer_succeeded)
+//				simple_uart_putstring((const uint8_t *) "succeeded ");
+//		else
+//				simple_uart_putstring((const uint8_t *) "failed ");
 		
     transfer_succeeded &= twi_master_clock_byte(address);
 	
-		simple_uart_putstring((const uint8_t *) "\r\ntwi_master_clock_byte : ");
-		if(transfer_succeeded)
-				simple_uart_putstring((const uint8_t *) "succeeded ");
-		else
-				simple_uart_putstring((const uint8_t *) "failed ");
+//		simple_uart_putstring((const uint8_t *) "\r\ntwi_master_clock_byte : ");
+//		if(transfer_succeeded)
+//				simple_uart_putstring((const uint8_t *) "succeeded ");
+//		else
+//				simple_uart_putstring((const uint8_t *) "failed ");
 	
     if (address & TWI_READ_BIT)														//read
     {
@@ -352,6 +352,7 @@ static bool twi_master_clock_byte(uint_fast8_t databyte)
 
         if (!twi_master_wait_while_scl_low())
         {
+						simple_uart_putstring((const uint8_t *) "\r\ntwi_master_wait_while_scl_low : false");
             transfer_succeeded = false; // Timeout
             break;
         }
@@ -372,9 +373,17 @@ static bool twi_master_clock_byte(uint_fast8_t databyte)
     // Pull SCL high and wait a moment for SDA line to settle
     // Make sure slave is not stretching the clock
     transfer_succeeded &= twi_master_wait_while_scl_low();
+//		if(transfer_succeeded)
+//		simple_uart_putstring((const uint8_t *) "\r\ntwi_master_wait_while_scl_low : true");
+//		else
+//		simple_uart_putstring((const uint8_t *) "\r\ntwi_master_wait_while_scl_low : false");
 
     // Read ACK/NACK. NACK == 1, ACK == 0
     transfer_succeeded &= !(TWI_SDA_READ());
+//		if(transfer_succeeded)
+//		simple_uart_putstring((const uint8_t *) "\r\nTWI_SDA_READ : true");
+//		else
+//		simple_uart_putstring((const uint8_t *) "\r\nTWI_SDA_READ : false");
 
     // Finish ACK/NACK bit clock cycle and give slave a moment to release control
     // of the SDA line
@@ -502,5 +511,3 @@ static bool twi_master_wait_while_scl_low(void)
 
     return true;
 }
-
-/*lint --flb "Leave library region" */
