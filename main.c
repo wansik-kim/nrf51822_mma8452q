@@ -88,49 +88,46 @@ bool write_register(uint8_t device_address, uint8_t register_address, const uint
 	
 	w2_data[0] = register_address;
 	w2_data[1] = value;
-  return twi_master_transfer(device_address, w2_data, 2, TWI_ISSUE_STOP);
+	twi_master_transfer(device_address, w2_data, 2, TWI_ISSUE_STOP);
+  return true;
 }
 
-void MMA8452Stanby(){
-		uint8_t temp;
-		bool init = true;
-		init &= read_register(MMA8452_ADDRESS << 1,CTRL_REG1,&temp);
-		init &= write_register(MMA8452_ADDRESS << 1,CTRL_REG1,temp & ~(0x01));
-		if(init)
-    simple_uart_putstring((const uint8_t *)" \r\nStanby true");
-		else
-    simple_uart_putstring((const uint8_t *)" \r\nStanby false");
-}
-
-void MMA8452Active(){
-		uint8_t temp;
-		bool init = true;
-		init &= read_register(MMA8452_ADDRESS << 1,CTRL_REG1,&temp);
-		init &= write_register(MMA8452_ADDRESS << 1,CTRL_REG1,temp | 0x01);
-		if(init)
-    simple_uart_putstring((const uint8_t *)" \r\nActive true");
-		else
-    simple_uart_putstring((const uint8_t *)" \r\nActive false");
-}
-
-void readAccelData(int *destination)
+void readAccelData(short int *destination)
 {
   uint8_t rawData[6];  // x/y/z accel register data stored here
 	bool init = true;
 	
   init &= read_registers(MMA8452_ADDRESS << 1,OUT_X_MSB, 6, rawData);  // Read the six raw data registers into data array
-//	if(init)
-//	simple_uart_putstring((const uint8_t *)" \r\nOUT_X_MSB true");
-//	else
-//	simple_uart_putstring((const uint8_t *)" \r\nOUT_X_MSB false");
-
+//	ACC_getdata(rawData);
+	nrf_delay_ms(1);
+	
+	char c[30];
+	sprintf(c,"%d",rawData[0]);
+	simple_uart_putstring((const uint8_t *) "\r\n");
+	simple_uart_putstring((const uint8_t *) c);
+	sprintf(c,"%d",rawData[1]);
+	simple_uart_putstring((const uint8_t *) "   ");
+	simple_uart_putstring((const uint8_t *) c);
+	sprintf(c,"%d",rawData[2]);
+	simple_uart_putstring((const uint8_t *) "   ");
+	simple_uart_putstring((const uint8_t *) c);
+	sprintf(c,"%d",rawData[3]);
+	simple_uart_putstring((const uint8_t *) "   ");
+	simple_uart_putstring((const uint8_t *) c);
+	sprintf(c,"%d",rawData[4]);
+	simple_uart_putstring((const uint8_t *) "   ");
+	simple_uart_putstring((const uint8_t *) c);
+	sprintf(c,"%d",rawData[5]);
+	simple_uart_putstring((const uint8_t *) "   ");
+	simple_uart_putstring((const uint8_t *) c);
+	
   // Loop to calculate 12-bit ADC and g value for each axis
   for(int i = 0; i < 3 ; i++)
   {
-    int gCount = (rawData[i*2] << 8) | rawData[(i*2)+1];  //Combine the two 8 bit registers into one 12-bit number
-    gCount >>= 4; //The registers are left align, here we right align the 12-bit integer
-
-    // If the number is negative, we have to make it so manually (no 12-bit data type)
+    short int gCount = (rawData[i*2] << 8) | rawData[(i*2)+1];  //Combine the two 8 bit registers into one 12-bit number
+		
+    gCount  = gCount >> 4; //The registers are left align, here we right align the 12-bit integer
+//    // If the number is negative, we have to make it so manually (no 12-bit data type)
     if (rawData[i*2] > 0x7F)
     {  
 				gCount = ~gCount + 1;
@@ -169,21 +166,13 @@ void parse(int y, int z){
  */
 int main(void)
 {
-    // Delay for touchpad power up 
-    nrf_delay_ms(400);
-
 		uint8_t data;
     bool who_am_i;
-
-//    nrf_gpio_port_dir_set(NRF_GPIO_PORT_SELECT_PORT1, NRF_GPIO_PORT_DIR_OUTPUT);
-//		nrf_gpio_cfg_output(3);
-//		nrf_gpio_cfg_output(4);
+		bool init = true;
+	
 		nrf_gpio_cfg_output	(LED_0);
 		nrf_gpio_cfg_output	(LED_1);
 		nrf_gpio_pin_set(LED_0);
-//		nrf_gpio_pin_set(LED_1);
-//		nrf_gpio_pin_clear(LED_0);
-//		nrf_gpio_pin_clear(LED_1);
 	
     simple_uart_config(RTS_PIN_NUMBER, TX_PIN_NUMBER, CTS_PIN_NUMBER, RX_PIN_NUMBER, HWFC);
     simple_uart_putstring((const uint8_t *)" \r\nStart I2C \r\n");
@@ -201,14 +190,21 @@ int main(void)
 		
 		nrf_gpio_pin_set(LED_1);
 		nrf_gpio_pin_clear(LED_0);
-		nrf_delay_ms(500);
 
 		who_am_i = read_register(MMA8452_ADDRESS << 1,WHO_AM_I,&data);
-		nrf_delay_ms(4);
+		
 		
 		if(who_am_i){							//data == 0x2A
+			nrf_delay_us(100);
+			write_register(MMA8452_ADDRESS << 1,XYZ_DATA_CFG, 0x02);
+			nrf_delay_us(100);
+			write_register(MMA8452_ADDRESS << 1,CTRL_REG1, 0x33);
 			nrf_gpio_pin_clear(LED_1);
 			nrf_gpio_pin_set(LED_0);
+			char c[30];
+			sprintf(c,"%d",data);
+			simple_uart_putstring((const uint8_t *) "\r\n WHO_AM_I : ");
+			simple_uart_putstring((const uint8_t *) c);
 			data = '0';
 			simple_uart_putstring((const uint8_t *) "\r\nMMA8452Q is online...");
 		}
@@ -218,49 +214,33 @@ int main(void)
 			simple_uart_putstring((const uint8_t *) "\r\nMMA8452Q is offline...");
 		}
 		
-		MMA8452Stanby();
-		
-		uint8_t fsr = GSCALE;
-		if(fsr > 8) fsr = 8;
-		fsr >>= 2;
-		write_register(MMA8452_ADDRESS << 1,XYZ_DATA_CFG,fsr);
-		
-  // Setup the 3 data rate bits, from 0 to 7
-		read_register(MMA8452_ADDRESS << 1,CTRL_REG1,&data);
-		write_register(MMA8452_ADDRESS << 1,CTRL_REG1,data & ~(0x38));
-		if (dataRate <= 7){
-			data = '0';
-			read_register(MMA8452_ADDRESS << 1,CTRL_REG1,&data);
-			write_register(MMA8452_ADDRESS << 1,CTRL_REG1,data | (dataRate << 3));
-		}
-  //The default data rate is 800Hz and we don't modify it in this example code
+		short int x[3];
 
-		
-		MMA8452Active();
-		
-		int x[3];
+
 		while(1){
 				readAccelData(x);
 			
 				float accelG[3];  // Stores the real accel value in g's
+				
 				for (int i = 0 ; i < 3 ; i++)
 				{
-					accelG[i] = (float) x[i] / ((1<<12)/(2*GSCALE));  // get actual g value, this depends on scale being set
+//					accelG[i] = (float) x[i] / ((1<<12)/(2*GSCALE));  // get actual g value, this depends on scale being set
+					accelG[i] = (float) x[i] / 256;  // get actual g value, this depends on scale being set
+					accelG[i] *= 10;
 				}
-				int a = accelG[1]*10;
-				int b = accelG[2]*10;
-//				parse(a,b);
-				nrf_delay_ms(20);
-			
+//				int a = accelG[1]*10;
+//				int b = accelG[2]*10;
+////				parse(a,b);
+//			
 				char c[30];
-				sprintf(c,"%f",accelG[0]);
+				sprintf(c,"%d",x[0]);
 				simple_uart_putstring((const uint8_t *) "\r\n");
 				simple_uart_putstring((const uint8_t *) c);
-				sprintf(c,"%f",accelG[1]);
-				simple_uart_putstring((const uint8_t *) "          ");
+				sprintf(c,"%d",x[1]);
+				simple_uart_putstring((const uint8_t *) "  ");
 				simple_uart_putstring((const uint8_t *) c);
-				sprintf(c,"%f",accelG[2]);
-				simple_uart_putstring((const uint8_t *) "          ");
+				sprintf(c,"%d",x[2]);
+				simple_uart_putstring((const uint8_t *) "  ");
 				simple_uart_putstring((const uint8_t *) c);
 		}
 }
